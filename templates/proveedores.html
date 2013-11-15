@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<h1>Proveedores</h1>
+
+<table>
+<thead>
+<th>Id</th>
+<th>Categoría</th>
+<th>Nombre</th>
+</thead>
+<tbody>
+{% for proveedor in proveedores %}
+<tr>
+<td>{{ proveedor.0 }}</td>
+<td><a href="{{ url_for('asignar_categoria', proveedor_id=proveedor.0) }}">{% if proveedor.1 %}{{ proveedor.4|capitalize }}{% else %}Asignar categoría{% endif %}</a></td>
+<td>{{ proveedor.2 }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

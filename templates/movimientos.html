@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<h1>Movimientos</h1>
+
+<table>
+<thead>
+<th>Id</th>
+<th>Proveedor</th>
+<th>Fecha</th>
+<th>Importe</th>
+<th>Saldo</th>
+</thead>
+<tbody>
+{% for movimiento in movimientos %}
+<tr>
+<td>{{ movimiento.0 }}</td>
+<td>{{ movimiento.1 }}</td>
+<td>{{ movimiento.2 }}</td>
+<td>{{ movimiento.3 }}</td>
+<td>{{ movimiento.4 }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

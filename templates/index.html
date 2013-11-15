@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="starter-template">
+  {% if proveedores_sin_categoria > 0 %}
+  <div class="alert alert-warning" style="margin-top: 20px">Hay <a href="{{ url_for('proveedores_sin_categoria') }}" class="alert-link">{{ proveedores_sin_categoria }} proveedores</a> sin categoría asignada</div>
+  {% endif %}
+
+      <script type='text/javascript'>
+        google.load('visualization', '1', {packages:['table']});
+        google.setOnLoadCallback(drawTable);
+        function drawTable() {
+          var data = new google.visualization.DataTable();
+          data.addColumn('string', 'Categoría');
+          {% for month, month_name in months.iteritems() %}
+            data.addColumn('number', '{{ month_name|capitalize }}');
+          {% endfor %}
+          data.addRows([
+            {% for categoria_id, importe_mes in importe_categorias_mes.iteritems() %}
+              ['<a href="{{ url_for('grafica_categoria', categoria_id=categoria_id) }}">{{ nombre_categorias[categoria_id]|capitalize }}</a>',
+              {% for month, month_name in months.iteritems() %}
+                 {v: {{ importe_mes[month]|default(0.0) }}, f: '{{ importe_mes[month]|default('0.0') }} €'},
+	      {% endfor %}
+              ],
+            {% endfor %}
+          ]);
+
+          var table = new google.visualization.Table(document.getElementById('table_div'));
+          table.draw(data, {showRowNumber: false, allowHtml: true});
+        }
+      </script>
+  <div id="table_div"></div>
+
+  <div class="alert alert-info" style="margin-top: 20px">Último movimiento registrado el día: {{ fecha_ultimo_movimiento }} </div>
+</div>
+
+{% endblock %}
