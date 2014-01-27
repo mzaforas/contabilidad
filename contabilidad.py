@@ -96,7 +96,12 @@ def index():
 
     # Cálculo de la fecha del último movimiento
     query = 'select fecha from movimientos order by fecha desc limit 1'
-    fecha_ultimo_movimiento = arrow.get(get_movimientos(g.db_conn, query)[0][0]).format('DD/MM/YYYY')
+    lista_movimientos = get_movimientos(g.db_conn, query)
+    if not lista_movimientos:
+        fecha_ultimo_movimiento = 0
+    else:
+        fecha_ultimo_movimiento = arrow.get(lista_movimientos[0][0]).format('DD/MM/YYYY')
+
 
     return render_template('index.html', importe_categorias_mes=importe_categorias_mes, months=months, nombre_categorias=nombre_categorias, proveedores_sin_categoria=proveedores_sin_categoria, fecha_ultimo_movimiento=fecha_ultimo_movimiento)
 
@@ -135,6 +140,10 @@ def grafica_categoria(categoria_id):
     importes = _calculo_importes_anuales(importes_anuales, categoria_id)
     return render_template('grafica_categoria.html', importes=importes[0], categoria=categoria)
 
+@app.route("/detalle-importe")
+def detalle_importe():
+
+    return render_template('detalle_importe.html')
 
 @app.route("/upload", methods=['POST'])
 def upload():
