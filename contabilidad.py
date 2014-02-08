@@ -11,7 +11,7 @@ import arrow
 from flask import Flask, request, session, g, redirect, url_for, abort, render_template, flash
 from werkzeug import secure_filename
 from excel_parser import parse_file
-from model import init_db, connect_db, get_proveedores, get_movimientos, get_categorias, get_proveedor, get_categoria, update_proveedor, get_movimientos_by_category
+from model import init_db, connect_db, get_proveedores, get_movimientos, get_categorias, get_proveedor, get_categoria, update_proveedor, get_total_by_category
 
 
 # app instance
@@ -30,6 +30,7 @@ app.config.from_object(__name__)
 def before_request():
     g.db_conn = connect_db(app)
 
+
 @app.teardown_request
 def teardown_request(exception):
     db_conn = getattr(g, 'db_conn', None)
@@ -37,12 +38,12 @@ def teardown_request(exception):
         db_conn.close()
 
 
-def _calculo_importes_anuales(nombre_categorias, categoria_id=None):
+def _calculo_importes_anuales(year, nombre_categorias, categoria_id=None):
     importe_categorias_mes = dict((id, dict()) for id in nombre_categorias.keys())
     total_yearly_by_categoria = dict((id, 0.0) for id in nombre_categorias.keys())
     total_yearly_by_categoria[0] = 0.0
 
-    year = arrow.now().year
+
     for month in range(1, 13):
         total_by_month = 0.0
         from_time = datetime.datetime(year, month, 1, 0, 0)
@@ -51,7 +52,7 @@ def _calculo_importes_anuales(nombre_categorias, categoria_id=None):
         else:
             to_time = datetime.datetime(year, month+1, 1, 0, 0)
 
-        movimientos = get_movimientos_by_category(g.db_conn, from_time, to_time, categoria_id)
+        movimientos = get_total_by_category(g.db_conn, from_time, to_time, categoria_id)
         for movimiento_categoria_id, importe in movimientos:
             if movimiento_categoria_id is not None:
                 importe_categorias_mes[movimiento_categoria_id][month] = importe
@@ -63,17 +64,23 @@ def _calculo_importes_anuales(nombre_categorias, categoria_id=None):
         total_yearly_by_categoria[0] += total_by_month
     # Total por categoria
     for total_categoria_id, total in total_yearly_by_categoria.iteritems():
-        importe_categorias_mes[total_categoria_id][u'año'] = total
+        # 0 is used as key for full year
+        importe_categorias_mes[total_categoria_id][0] = total
     return importe_categorias_mes
 
+
 # controllers
-@app.route("/")
-def index():
+@app.route('/', defaults={'year': None})
+@app.route("/<int:year>")
+def index(year):
+    if year is None:
+        year = arrow.now().year
+
     # Cálculo de importe categoría mes
     nombre_categorias = dict((id, nombre) for (id, nombre) in get_categorias(g.db_conn))
     nombre_categorias[0] = 'total'
 
-    importe_categorias_mes = _calculo_importes_anuales(nombre_categorias)
+    importe_categorias_mes = _calculo_importes_anuales(year, nombre_categorias)
 
     months = {
         1: 'enero',
@@ -88,7 +95,7 @@ def index():
         10: 'octubre',
         11: 'noviembre',
         12: 'diciembre',
-        u'año': u'total año'}
+        0: u'total año'}
 
     # Cálculo de los proveedores pendientes de asignar categoría
     query = 'select count(*) from proveedores where categoria_id is null'
@@ -102,8 +109,13 @@ def index():
     else:
         fecha_ultimo_movimiento = arrow.get(lista_movimientos[0][0]).format('DD/MM/YYYY')
 
-
-    return render_template('index.html', importe_categorias_mes=importe_categorias_mes, months=months, nombre_categorias=nombre_categorias, proveedores_sin_categoria=proveedores_sin_categoria, fecha_ultimo_movimiento=fecha_ultimo_movimiento)
+    return render_template('index.html',
+                           importe_categorias_mes=importe_categorias_mes,
+                           months=months,
+                           nombre_categorias=nombre_categorias,
+                           proveedores_sin_categoria=proveedores_sin_categoria,
+                           fecha_ultimo_movimiento=fecha_ultimo_movimiento,
+                           year=year)
 
 
 def _allowed_file(filename):
@@ -128,22 +140,37 @@ def movimientos():
     movimientos = get_movimientos(g.db_conn)
     return render_template('movimientos.html', movimientos=movimientos)
 
+@app.route('/grafica-categoria/<int:categoria_id>', defaults={'year': None})
+@app.route("/grafica-categoria/<int:year>/<int:categoria_id>")
+def grafica_categoria(year, categoria_id):
+    if year is None:
+        year = arrow.now().year
 
-@app.route("/grafica-categoria/<int:categoria_id>")
-def grafica_categoria(categoria_id):
     importes_anuales = {0: 0.0}
     if categoria_id == 0:
         categoria = (0, 'Total')
     else:
         categoria = get_categoria(g.db_conn, categoria_id)
         importes_anuales.update({categoria_id: 0.0})
-    importes = _calculo_importes_anuales(importes_anuales, categoria_id)
+    importes = _calculo_importes_anuales(year, importes_anuales, categoria_id)
     return render_template('grafica_categoria.html', importes=importes[0], categoria=categoria)
 
-@app.route("/detalle-importe")
-def detalle_importe():
 
-    return render_template('detalle_importe.html')
+@app.route("/detalle-movimientos/<int:year>/<int:month>/<int:categoria_id>")
+def detalle_movimientos(year, month, categoria_id):
+
+    from_time = datetime.datetime(year, month, 1, 0, 0)
+    if month == 12:
+        to_time = datetime.datetime(year + 1, 1, 1, 0, 0)
+    else:
+        to_time = datetime.datetime(year, month + 1, 1, 0, 0)
+
+    query = 'select date(m.fecha, "unixepoch"), m.importe, p.nombre from movimientos m join proveedores p on m.proveedor_id=p.id where m.fecha>=%s and m.fecha<%s and p.categoria_id=%s order by m.fecha;' % (from_time.strftime("%s"), to_time.strftime("%s"), categoria_id)
+    movimientos = get_movimientos(g.db_conn, query)
+
+    print movimientos
+    return render_template('movimientos.html', movimientos=movimientos)
+
 
 @app.route("/upload", methods=['POST'])
 def upload():
@@ -159,6 +186,7 @@ def upload():
         flash('El fichero ha sido procesado correctamente. Leidos %d movimientos' % movimientos_leidos)
 
     return redirect(url_for('index'))
+
 
 @app.route("/asignar-categoria/<int:proveedor_id>", methods=['GET', 'POST'])
 def asignar_categoria(proveedor_id):

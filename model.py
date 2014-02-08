@@ -58,7 +58,7 @@ def get_movimientos(db_conn, query=None):
     return cursor.fetchall()
 
 
-def get_movimientos_by_category(db_conn, from_time, to_time, category_id=None):
+def get_total_by_category(db_conn, from_time, to_time, category_id=None):
     if category_id:
         query = 'select p.categoria_id, sum(m.importe) from movimientos m join proveedores p on m.proveedor_id=p.id where m.fecha>=%s and m.fecha<%s and p.categoria_id=%s group by p.categoria_id;' % (from_time.strftime("%s"), to_time.strftime("%s"), category_id)
     else:

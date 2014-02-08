@@ -19,7 +19,7 @@
             {% for categoria_id, importe_mes in importe_categorias_mes.iteritems() %}
               ['<a href="{{ url_for('grafica_categoria', categoria_id=categoria_id) }}">{{ nombre_categorias[categoria_id]|capitalize }}</a>',
               {% for month, month_name in months.iteritems() %}
-                 {v: {{ importe_mes[month]|default(0.0) }}, f: '<a href="{{ url_for('detalle_importe') }}">{{ importe_mes[month]|default('0.0') }} €</a>'},
+                 {v: {{ importe_mes[month]|default(0.0) }}, f: '<a href="{{ url_for('detalle_movimientos', year=year, month=month, categoria_id=categoria_id) }}">{{ importe_mes[month]|default('0.0') }} €</a>'},
 	      {% endfor %}
               ],
             {% endfor %}
