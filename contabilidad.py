@@ -165,7 +165,10 @@ def detalle_movimientos(year, month, categoria_id):
     else:
         to_time = datetime.datetime(year, month + 1, 1, 0, 0)
 
-    query = 'select date(m.fecha, "unixepoch"), m.importe, p.nombre from movimientos m join proveedores p on m.proveedor_id=p.id where m.fecha>=%s and m.fecha<%s and p.categoria_id=%s order by m.fecha;' % (from_time.strftime("%s"), to_time.strftime("%s"), categoria_id)
+    if categoria_id == 0:
+        query = 'select date(m.fecha, "unixepoch"), m.importe, p.nombre from movimientos m join proveedores p on m.proveedor_id=p.id where m.fecha>=%s and m.fecha<%s order by m.fecha;' % (from_time.strftime("%s"), to_time.strftime("%s"))
+    else:
+        query = 'select date(m.fecha, "unixepoch"), m.importe, p.nombre from movimientos m join proveedores p on m.proveedor_id=p.id where m.fecha>=%s and m.fecha<%s and p.categoria_id=%s order by m.fecha;' % (from_time.strftime("%s"), to_time.strftime("%s"), categoria_id)
     movimientos = get_movimientos(g.db_conn, query)
 
     print movimientos
