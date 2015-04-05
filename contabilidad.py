@@ -184,8 +184,12 @@ def upload():
     else:
         filename = secure_filename(fd.filename)
         fd.save(os.path.join('/tmp', filename))
-        movimientos_leidos = parse_file(g.db_conn, '/tmp/%s' % filename)
-        flash('El fichero ha sido procesado correctamente. Leidos %d movimientos' % movimientos_leidos)
+        try:
+            movimientos_leidos = parse_file(g.db_conn, '/tmp/%s' % filename)
+        except Exception as e:
+            flash('Error procesando el fichero: %s' % e)
+        else:
+            flash('El fichero ha sido procesado correctamente. Leidos %d movimientos' % movimientos_leidos)
 
     return redirect(url_for('index'))
 
